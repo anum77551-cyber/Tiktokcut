@@ -82,9 +82,9 @@
     </div>
 
     <script>
-        // ⚠️ MASUKKAN DATA DI BAWAH INI SESUAI PROYEK SUPABASE & LINK TIOTOKMU ⚠️
+        // ⚠️ MASUKKAN DATA DI BAWAH INI SESUAI PROYEK SUPABASE & LINK TIKTOK PRIBADIMU ⚠️
         const SUPABASE_URL = "https://oagaygjmfguwrrrazmwky.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_kh11ncH5D5IKvLGvr8PoDg_w9Z-PBM8";
+        const SUPABASE_KEY = "sb_publishable_kh11ncH5D5IKvLGvr8PoDg_w9Z-PBM8"; 
         const LINK_TIKTOK_ADMIN = "https://vt.tiktok.com/ZS9jucobXaEa9-mvaD0/"; 
 
         // Inisialisasi Supabase Client
@@ -119,6 +119,11 @@
 
         // Jalankan Alur Gerbang Admin
         function bukaKunciWeb() {
+            if (LINK_TIKTOK_ADMIN.includes("PASTE_LINK_TIKTOK")) {
+                alert("Harap ganti variabel LINK_TIKTOK_ADMIN dengan link TikTok asli milikmu di dalam kode terlebih dahulu!");
+                return;
+            }
+
             window.open(LINK_TIKTOK_ADMIN, '_blank');
 
             btnGate.classList.add('hidden');
@@ -204,7 +209,6 @@
                 userCoins += 1;
                 localStorage.setItem('sc_coins', userCoins);
 
-                // Tarik angka klik terbaru, lalu tambahkan 1 secara manual (Logika Update)
                 const { data: currentData } = await supabase.from('tiktok_links').select('current_clicks').eq('id', id).single();
                 
                 if (currentData) {
