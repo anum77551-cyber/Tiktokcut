@@ -20,9 +20,9 @@
                 <p class="text-sm text-slate-500 mt-2">Untuk masuk ke Web Saling Bantu ini, Anda wajib membantu mengklik link Admin terlebih dahulu selama 10 detik.</p>
             </div>
             
-            <button onclick="bukaKunciWeb()" id="btnGate" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-rose-200">
-                <i class="fa-solid fa-key"></i> Klik di Sini untuk Buka Kunci
-            </button>
+            <a href="https://v.tiktok.com/ZMrXXXXXX/" target="_blank" onclick="setTimeout(() => { document.getElementById('gateScreen').classList.add('hidden'); document.getElementById('mainWebContainer').classList.remove('opacity-10', 'pointer-events-none'); fetchLinks(); }, 10000)" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-rose-200 text-center block location-btn">
+            <i class="fa-solid fa-key"></i> Klik di Sini untuk Buka Kunci
+            </a>
 
             <p id="gateTimerText" class="text-xs text-slate-400 hidden">Memvalidasi... Jangan tutup halaman TikTok dalam <span id="gateCountdown" class="font-bold text-rose-500 text-sm">10</span> detik.</p>
         </div>
