@@ -82,18 +82,22 @@
     </div>
 
     <script>
-        // ⚠️ MASUKKAN DATA DI BAWAH INI SESUAI PROYEK SUPABASE & LINK TIKTOK PRIBADIMU ⚠️
+        // ⚠️ MASUKKAN DATA DI BAWAH INI SECARA LENGKAP & TELITI ⚠️
         const SUPABASE_URL = "https://oagaygjmfguwrrrazmwky.supabase.co";
         const SUPABASE_KEY = "sb_publishable_kh11ncH5D5IKvLGvr8PoDg_w9Z-PBM8"; 
-        const LINK_TIKTOK_ADMIN = "https://vt.tiktok.com/ZS9jucobXaEa9-mvaD0/"; 
+        const LINK_TIKTOK_ADMIN = "https://vt.tiktok.com/ZS9jucobXaEa9-mvaD0/"; // GANTI DENGAN LINK KAMU
 
-        // Inisialisasi Supabase Client
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Proteksi eror inisialisasi
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Supabase gagal inisialisasi secara offline:", e);
+        }
 
-        // Koin awal di browser user
         let userCoins = parseInt(localStorage.getItem('sc_coins')) || 5;
 
-        // Ambil elemen DOM
+        // DOM Elements
         const gateScreen = document.getElementById('gateScreen');
         const mainWebContainer = document.getElementById('mainWebContainer');
         const btnGate = document.getElementById('btnGate');
@@ -105,25 +109,14 @@
         const emptyStateEl = document.getElementById('emptyState');
         const totalQueueEl = document.getElementById('totalQueue');
 
-        // Fungsi Memeriksa Status Kunci Gerbang Masuk (Gate)
         function cekStatusKunci() {
-            const sudahBukaKunci = localStorage.getItem('web_unlocked');
-            const waktuBukaKunci = localStorage.getItem('web_unlocked_time');
-            const sekarang = Date.now();
-
-            // Jika pernah klik & belum lewat 24 jam, hilangkan pengunci secara otomatis
-            if (sudahBukaKunci === "true" && (sekarang - waktuBukaKunci < 86400000)) {
+            const sudahBukaKunci = localStorage.getItem('web_unlocked_final');
+            if (sudahBukaKunci === "true") {
                 aksesWebTerbuka();
             }
         }
 
-        // Jalankan Alur Gerbang Admin
         function bukaKunciWeb() {
-            if (LINK_TIKTOK_ADMIN.includes("PASTE_LINK_TIKTOK")) {
-                alert("Harap ganti variabel LINK_TIKTOK_ADMIN dengan link TikTok asli milikmu di dalam kode terlebih dahulu!");
-                return;
-            }
-
             window.open(LINK_TIKTOK_ADMIN, '_blank');
 
             btnGate.classList.add('hidden');
@@ -139,27 +132,27 @@
 
                 if (timeLeft <= 0) {
                     clearInterval(gateInterval);
-                    
-                    // Simpan akses selama 24 jam ke browser pengguna
-                    localStorage.setItem('web_unlocked', 'true');
-                    localStorage.setItem('web_unlocked_time', Date.now());
-
-                    alert("Akses terbuka! Terima kasih telah membantu admin.");
+                    localStorage.setItem('web_unlocked_final', 'true');
+                    alert("Akses terbuka! Selamat datang.");
                     aksesWebTerbuka();
                 }
             }, 1000);
         }
 
-        // Menampilkan halaman utama web
         function aksesWebTerbuka() {
             gateScreen.classList.add('hidden');
             mainWebContainer.classList.remove('opacity-10', 'pointer-events-none');
             fetchLinks(); 
         }
 
-        // Sinkronisasi data real-time dengan server database Supabase
+        // AMBIL DATA DARI SUPABASE
         async function fetchLinks() {
             userCoinsEl.innerText = `${userCoins} Koin`;
+
+            if (!supabase) {
+                queueContainerEl.innerHTML = `<p class='text-center p-4 text-sm text-amber-600 bg-amber-50 rounded-xl'>⚠️ Sistem berjalan offline di laptop. Silakan online-kan ke Vercel agar database aktif!</p>`;
+                return;
+            }
 
             let { data: links, error } = await supabase
                 .from('tiktok_links')
@@ -168,7 +161,7 @@
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error("Gagal sinkronisasi data server:", error);
+                console.error(error);
                 return;
             }
 
@@ -188,11 +181,11 @@
                         <div class="flex-1 min-w-0">
                             <p class="text-xs text-slate-400 font-mono truncate mb-1.5">${link.url}</p>
                             <div class="w-full bg-slate-100 rounded-full h-1.5 max-w-[200px]">
-                                <div class="bg-emerald-500 h-1.5 rounded-full transition-all" style="width: ${progressPercent}%"></div>
+                                <div class="bg-emerald-500 h-1.5 rounded-full" style="width: ${progressPercent}%"></div>
                             </div>
                             <span class="text-[11px] font-medium text-slate-500 mt-1 block">${link.current_clicks}/${link.target_clicks} Slot Terbantu</span>
                         </div>
-                        <button onclick="handleVerifyClick(${link.id}, '${link.url}')" class="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-bold rounded-lg cursor-pointer">
+                        <button onclick="handleVerifyClick(${link.id})" class="px-4 py-2 bg-slate-950 text-white text-xs font-bold rounded-lg cursor-pointer">
                             Bantu Klik (+1 🪙)
                         </button>
                     </div>
@@ -200,46 +193,42 @@
             }).join('');
         }
 
-        // Logika verifikasi klik milik orang lain
-        async function handleVerifyClick(id, url) {
-            window.open(url, '_blank');
-            alert("Harap tunggu di halaman tautan selama 10 detik agar koin masuk.");
+        // UPDATE KLIK DI DATABASE
+        async function handleVerifyClick(id) {
+            // Cari data link target di database terlebih dahulu
+            const { data: currentData } = await supabase.from('tiktok_links').select('url, current_clicks').eq('id', id).single();
+            
+            if (!currentData) {
+                alert("Data link tidak ditemukan di server.");
+                return;
+            }
+
+            window.open(currentData.url, '_blank');
+            alert("Harap tunggu di halaman tautan selama 10 detik.");
 
             setTimeout(async () => {
                 userCoins += 1;
                 localStorage.setItem('sc_coins', userCoins);
 
-                const { data: currentData } = await supabase.from('tiktok_links').select('current_clicks').eq('id', id).single();
-                
-                if (currentData) {
-                    await supabase
-                        .from('tiktok_links')
-                        .update({ current_clicks: (currentData.current_clicks + 1) })
-                        .eq('id', id);
-                }
+                // Update jumlah klik ke Supabase
+                await supabase
+                    .from('tiktok_links')
+                    .update({ current_clicks: (currentData.current_clicks + 1) })
+                    .eq('id', id);
 
-                alert("Berhasil membantu! Koin Anda bertambah +1.");
+                alert("Berhasil! Koin bertambah.");
                 fetchLinks(); 
             }, 10000);
         }
 
-        // Memasukkan link baru milik pengguna ke database global
+        // INPUT LINK BARU KE DATABASE
         async function submitLink() {
             const urlInput = document.getElementById('tiktokUrl');
             const url = urlInput.value.trim();
 
-            if (url === "") {
-                alert("Harap masukkan link terlebih dahulu!");
-                return;
-            }
-            if (!url.includes("tiktok.com") && !url.includes("tokopedia.link")) {
-                alert("Gunakan format URL resmi TikTok Shop!");
-                return;
-            }
-            if (userCoins < 3) {
-                alert("Koin Anda tidak cukup! Minimal butuh 3 koin.");
-                return;
-            }
+            if (url === "") { alert("Masukkan link dulu!"); return; }
+            if (!url.includes("tiktok.com")) { alert("Harap gunakan link resmi TikTok!"); return; }
+            if (userCoins < 3) { alert("Koin tidak cukup! Butuh 3 koin."); return; }
 
             userCoins -= 3;
             localStorage.setItem('sc_coins', userCoins);
@@ -249,16 +238,15 @@
                 .insert([{ url: url, target_clicks: 3, current_clicks: 0 }]);
 
             if (error) {
-                alert("Terjadi kesalahan koneksi database global.");
+                alert("Gagal terhubung ke database server.");
                 console.error(error);
             } else {
                 urlInput.value = "";
-                alert("Sukses! Link Anda kini terpasang di antrean publik.");
+                alert("Sukses! Link kamu sudah masuk antrean global.");
                 fetchLinks();
             }
         }
 
-        // Jalankan sistem otentikasi kunci gerbang saat halaman dimuat
         cekStatusKunci();
     </script>
 </body>
